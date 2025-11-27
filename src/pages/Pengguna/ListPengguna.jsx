@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import MainLayout from "../../layouts/MainLayout"; 
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../utils/api'; // <--- KITA HANYA PAKAI INI
 import { 
   Plus, Search, Pencil, Trash2, 
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight 
@@ -33,14 +33,16 @@ export default function ListPengguna() {
   }, []);
 
   const fetchUsers = async () => {
-    try {
-      const response = await axios.get('http://localhost:5000/api/pengguna');
-      setDataPengguna(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error("Gagal mengambil data:", error);
-      setLoading(false);
-    }
+      try {
+        // ✅ BENAR: Menggunakan api instance
+        const response = await api.get('/pengguna'); 
+        
+        setDataPengguna(response.data);
+        setLoading(false);
+      } catch (error) {
+        console.error("Gagal mengambil data:", error);
+        setLoading(false);
+      }
   };
 
   // --- LOGIC FILTERING ---
@@ -73,31 +75,35 @@ export default function ListPengguna() {
     setOpenDeleteModal(true);
   };
 
-  // KONFIRMASI HAPUS (CALL API DELETE)
+  // --- KONFIRMASI HAPUS (PERBAIKAN DISINI) ---
   const handleConfirmDelete = async () => {
     if (!selectedUser) return;
     try {
       setDeleting(true);
-      setLoading(true);
+      // setLoading(true); // Opsional: Sebaiknya jangan loading full screen, cukup button loading
 
-      const response = await axios.delete(`http://localhost:5000/api/pengguna/${selectedUser.id}`);
+      // ✅ PERBAIKAN: Gunakan api.delete dan endpoint relatif
+      const response = await api.delete(`/pengguna/${selectedUser.id}`);
 
-      toast.success(response.data.message || `Pengguna ID ${selectedUser.id} berhasil dihapus.`, { autoClose: 3000 });
+      toast.success(response.data.message || `Pengguna berhasil dihapus.`, { autoClose: 3000 });
       
       setOpenDeleteModal(false);
       setSelectedUser(null);
+      
+      // Refresh data
       await fetchUsers();
+      
     } catch (error) {
       console.error("Gagal menghapus data:", error);
       toast.error(error.response?.data?.message || "Gagal menghapus pengguna.", { autoClose: 5000 });
-      setLoading(false);
+      // setLoading(false); 
     } finally {
       setDeleting(false);
     }
   };
 
   const handleCloseModal = () => {
-    if (deleting) return; // jangan bisa ditutup saat proses hapus
+    if (deleting) return; 
     setOpenDeleteModal(false);
     setSelectedUser(null);
   };
@@ -150,8 +156,8 @@ export default function ListPengguna() {
               type="text" 
               value={searchTerm}
               onChange={handleSearch}
-              className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full sm:w-64 pl-10 p-2" 
-              placeholder="Cari Nama, Username, Instansi..." 
+              className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full sm:w-80 pl-10 p-2" 
+              placeholder="Cari Nama, Username, Instansi" 
             />
           </div>
         </div>
@@ -234,19 +240,7 @@ export default function ListPengguna() {
         {/* Footer Paginasi */}
         <div className="p-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
           <span className="text-sm text-gray-500">
-            Menampilkan{" "}
-            <span className="font-semibold text-gray-900">
-              {currentItems.length > 0 ? indexOfFirstItem + 1 : 0}
-            </span>{" "}
-            sampai{" "}
-            <span className="font-semibold text-gray-900">
-              {Math.min(indexOfLastItem, filteredData.length)}
-            </span>{" "}
-            dari{" "}
-            <span className="font-semibold text-gray-900">
-              {filteredData.length}
-            </span>{" "}
-            data
+            Menampilkan <span className="font-semibold text-gray-900">{currentItems.length > 0 ? indexOfFirstItem + 1 : 0}</span> sampai <span className="font-semibold text-gray-900">{Math.min(indexOfLastItem, filteredData.length)}</span> dari <span className="font-semibold text-gray-900">{filteredData.length}</span> data
           </span>
           <div className="inline-flex -space-x-px text-sm">
             <button 
@@ -284,7 +278,7 @@ export default function ListPengguna() {
         </div>
       </div>
 
-      {/* MODAL KONFIRMASI HAPUS - HEADLESS UI */}
+      {/* MODAL KONFIRMASI HAPUS */}
       <Dialog open={openDeleteModal} onClose={handleCloseModal} className="relative z-50">
         <DialogBackdrop
           transition
@@ -312,7 +306,7 @@ export default function ListPengguna() {
                         <span className="font-semibold text-gray-800">
                           {selectedUser?.nama_lengkap || `dengan ID ${selectedUser?.id}`}
                         </span>
-                        ? Semua data terkait pengguna ini akan dihapus dan tindakan ini tidak dapat dibatalkan.
+                        ? Semua data terkait pengguna ini akan dihapus.
                       </p>
                     </div>
                   </div>
@@ -329,7 +323,6 @@ export default function ListPengguna() {
                 </button>
                 <button
                   type="button"
-                  data-autofocus
                   onClick={handleCloseModal}
                   disabled={deleting}
                   className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto disabled:opacity-60"
