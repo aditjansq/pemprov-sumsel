@@ -11,7 +11,7 @@ router.post('/register', verifyToken, registerUser);
 
 // === ROUTE RAHASIA (Harus bawa Token) ===)
 
-router.get('/pengguna', verifyToken, getUsers); 
+router.get('/pengguna', getUsers); 
 
 router.get('/pengguna/:id', verifyToken, getUserByIdController);
 router.put('/pengguna/:id', verifyToken, updateUser);
